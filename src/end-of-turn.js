@@ -39,8 +39,6 @@ const chatExample3 = [
     { role: "user", content: "I'm not sure what to do? But maybe" }
 ];
 
-
-
 /**
  * Model Setup Instructions:
  * 1. Download ONNX model from Hugging Face:

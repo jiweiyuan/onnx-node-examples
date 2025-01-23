@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@huggingface/transformers": "^3.2.4",
+    "kokoro-js": "^1.0.1",
     "node-fetch": "^3.3.2",
     "node-wav": "^0.0.2",
     "nodejieba": "^3.4.4",

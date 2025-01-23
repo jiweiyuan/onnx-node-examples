@@ -70,11 +70,25 @@ const convertToPinyin = (text) => {
 
 
 const loadAudio = async (audioPath) => {
+    
     const buffer = fs.readFileSync(audioPath);
     const result = wav.decode(buffer);
+    
+    // Get mono channel and convert to specified sample rate
+    const audioData = new Float32Array(result.channelData[0]);
+    
+    // Normalize audio (similar to Python's division by 32768.0)
+    const normalizedAudio = audioData.map(x => x / 32768.0);
+    
+    // Get audio length
+    const audioLen = normalizedAudio.length;
+    
+    // Reshape to [1, 1, -1] format
     return {
-        data: new Uint16Array(result.channelData[0]),
-        sampleRate: result.sampleRate
+        data: normalizedAudio,
+        length: audioLen,
+        sampleRate: CONFIG.SAMPLE_RATE,
+        dims: [1, 1, audioLen]
     };
 };
 
@@ -90,7 +104,7 @@ async function initializeONNXSessions() {
     const sessionB = await ort.InferenceSession.create(PATHS.ONNX_MODEL_B, sessionOptions);
     const sessionC = await ort.InferenceSession.create(PATHS.ONNX_MODEL_C, sessionOptions);
 
-    console.log('sessionA:', sessionA.inputMetadata, sessionA.outputNames);
+    console.log('sessionA:', sessionA.outputNames);
 
     // const inputMetadataA = sessionA.inputNames.map(name => {
     //     const meta = sessionA.input(name);
@@ -117,7 +131,7 @@ async function main(refText, genText) {
         const { data: audio } = await loadAudio(PATHS.REF_AUDIO);
 
         // Shape: [1, 1, audio_length]
-        const audioTensor = new ort.Tensor('float16', audio, [1, 1, audio.length]);
+        const audioTensor = new ort.Tensor('float32', audio, [1, 1, audio.length]);
         console.log('Audio tensor shape:', audioTensor.dims);
         
         // Convert text to pinyin tokens
@@ -162,8 +176,7 @@ async function main(refText, genText) {
         const { noise, ropeCos, ropeSin } = await sessions.sessionA.run({
             audio: audioTensor,
             max_duration: maxDuration,
-            text_ids: textTensor,
-            
+            text_ids: textTensor
         });
 
         console.log('Running NFE steps...');
